@@ -1,23 +1,31 @@
 import { StarRating } from "./StarRating";
-import { User } from "lucide-react";
+import { User, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Review {
   review_id: string;
   rating: number;
   comment: string;
   created_at: string;
+  user_id: string | null;
   users: {
     username: string;
+    email: string;
   } | null;
 }
 
 interface ReviewListProps {
   reviews: Review[];
   isLoading: boolean;
+  onEdit?: (review: Review) => void;
+  onDelete?: (reviewId: string) => void;
 }
 
-export function ReviewList({ reviews, isLoading }: ReviewListProps) {
+export function ReviewList({ reviews, isLoading, onEdit, onDelete }: ReviewListProps) {
+  const { userProfile } = useAuth();
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -42,31 +50,57 @@ export function ReviewList({ reviews, isLoading }: ReviewListProps) {
 
   return (
     <div className="space-y-4">
-      {reviews.map((review, index) => (
-        <div
-          key={review.review_id}
-          className="bg-card rounded-xl p-4 animate-slide-up"
-          style={{ animationDelay: `${index * 0.1}s` }}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <User className="w-5 h-5 text-muted-foreground" />
+      {reviews.map((review, index) => {
+        const isOwner = userProfile?.user_id === review.user_id;
+        
+        return (
+          <div
+            key={review.review_id}
+            className="bg-card rounded-xl p-4 animate-slide-up"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <User className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">
+                    {review.users?.username || "Anonymous"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(review.created_at), "MMM d, yyyy")}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-foreground">
-                  {review.users?.username || "Anonymous"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(review.created_at), "MMM d, yyyy")}
-                </p>
+              <div className="flex items-center gap-2">
+                <StarRating rating={review.rating} readonly size="sm" />
+                {isOwner && onEdit && onDelete && (
+                  <div className="flex gap-1 ml-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => onEdit(review)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => onDelete(review.review_id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
-            <StarRating rating={review.rating} readonly size="sm" />
+            <p className="mt-3 text-secondary-foreground leading-relaxed">{review.comment}</p>
           </div>
-          <p className="mt-3 text-secondary-foreground leading-relaxed">{review.comment}</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
